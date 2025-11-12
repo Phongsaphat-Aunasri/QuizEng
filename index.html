@@ -842,103 +842,33 @@
 
                 await fetchLeaderboard();
             }
-            // *** เพิ่มฟังก์ชันใหม่นี้ใน <script> ***
-            async function fetchLeaderboard() {
-                const leaderboardList = document.getElementById('leaderboard-list');
-                leaderboardList.innerHTML = '<div class="loading">กำลังโหลด...</div>';
-
-                try {
-                    const response = await fetch(APPS_SCRIPT_URL); // Apps Script doGet
-                    const data = await response.json();
-
-                    // Apps Script จะส่งข้อมูลกลับมาในรูปแบบ Array of Objects
-                    // ต้องตรวจสอบว่า data เป็น Array หรือไม่
-                    if (Array.isArray(data)) {
-                        displayLeaderboard(data);
-                    } else {
-                        throw new Error('Apps Script returned non-array data.');
-                    }
-
-                } catch (error) {
-                    console.error("Error fetching leaderboard:", error);
-                    leaderboardList.innerHTML = '<div style="color: #e74c3c; text-align: center;">ไม่สามารถโหลดกระดานคะแนนได้</div>';
-                }
-            }
-            // -------------------------------------------------------------------
-            if (!createResult || !createResult.isOk) {
-                leaderboardList.innerHTML = '<div style="color: #e74c3c; text-align: center;">ไม่สามารถบันทึกคะแนนได้</div>';
-                // still attempt to fetch existing leaderboard (maybe write failed but read works)
-                fetchAndDisplayLeaderboard();
-            } else {
-                // if create succeeded, try to fetch updated leaderboard and display it
-                // also try to store returned record id for highlighting (supports different SDK shapes)
-                const created = createResult.result || createResult.data || createResult.record || null;
-                if (created) {
-                    currentRecordId = created.id || created.__backendId || created._id || null;
-                }
-                await fetchAndDisplayLeaderboard();
-            }
+            
         }
 
-        // Try multiple common SDK methods to fetch leaderboard data, then call displayLeaderboard
-        async function fetchAndDisplayLeaderboard() {
+        async function fetchLeaderboard() {
             const leaderboardList = document.getElementById('leaderboard-list');
-            leaderboardList.innerHTML = '<div class="loading">กำลังโหลดกระดานคะแนน...</div>';
+            leaderboardList.innerHTML = '<div class="loading">กำลังโหลด...</div>';
 
-            let records = null;
+            try {
+                const response = await fetch(APPS_SCRIPT_URL); // Apps Script doGet
+                const data = await response.json();
 
-            const tryFns = [
-                async () => window.dataSdk.list && typeof window.dataSdk.list === 'function' ? await window.dataSdk.list() : null,
-                async () => window.dataSdk.read && typeof window.dataSdk.read === 'function' ? await window.dataSdk.read() : null,
-                async () => window.dataSdk.getAll && typeof window.dataSdk.getAll === 'function' ? await window.dataSdk.getAll() : null,
-                async () => window.dataSdk.fetch && typeof window.dataSdk.fetch === 'function' ? await window.dataSdk.fetch() : null,
-                async () => window.dataSdk.get && typeof window.dataSdk.get === 'function' ? await window.dataSdk.get() : null,
-                async () => window.dataSdk.query && typeof window.dataSdk.query === 'function' ? await window.dataSdk.query() : null
-            ];
-
-            for (const fn of tryFns) {
-                if (!window.dataSdk) break;
-                try {
-                    const res = await fn();
-                    // handle a few common response shapes
-                    if (!res) continue;
-                    if (Array.isArray(res)) {
-                        records = res;
-                        break;
-                    }
-                    if (res.data && Array.isArray(res.data)) {
-                        records = res.data;
-                        break;
-                    }
-                    if (res.result && Array.isArray(res.result)) {
-                        records = res.result;
-                        break;
-                    }
-                    if (res.records && Array.isArray(res.records)) {
-                        records = res.records;
-                        break;
-                    }
-                } catch (e) {
-                    // ignore and try next
-                    console.warn('fetch attempt failed:', e);
+                // ต้องตรวจสอบว่า data เป็น Array หรือไม่
+                if (Array.isArray(data)) {
+                    displayLeaderboard(data);
+                } else {
+                    // หาก Apps Script ส่งค่าอื่นที่ไม่ใช่ Array กลับมา (เช่น Error Message)
+                    throw new Error('Apps Script returned non-array data or error.');
                 }
+
+            } catch (error) {
+                console.error("Error fetching leaderboard:", error);
+                leaderboardList.innerHTML = '<div style="color: #e74c3c; text-align: center;">ไม่สามารถโหลดกระดานคะแนนได้</div>';
             }
-
-            if (!records) {
-                leaderboardList.innerHTML = '<div style="text-align: center; color: #666;">ยังไม่มีคะแนนในระบบ</div>';
-                return;
-            }
-
-            // Normalize records (map common fields)
-            const normalized = records.map(r => ({
-                player_name: r.player_name || r.playerName || r.name || '',
-                final_score: (r.final_score !== undefined && r.final_score !== null) ? r.final_score : (r.finalScore || r.total_score || r.score || 0),
-                __backendId: r.__backendId || r.id || r._id || r.uuid || null,
-                raw: r
-            }));
-
-            displayLeaderboard(normalized);
         }
+        // *** END: fetchLeaderboard() ***
+
+
 
         function displayLeaderboard(data) {
             const leaderboardList = document.getElementById('leaderboard-list');
