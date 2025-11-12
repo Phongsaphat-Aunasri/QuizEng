@@ -1,0 +1,1051 @@
+<!doctype html>
+<html lang="th">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Present Perfect Quiz Game</title>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 800px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      padding: 40px;
+      margin: 20px;
+    }
+
+    .start-screen, .quiz-screen, .result-screen {
+      display: none;
+    }
+
+    .start-screen.active, .quiz-screen.active, .result-screen.active {
+      display: block;
+    }
+
+    h1 {
+      text-align: center;
+      color: #667eea;
+      margin-bottom: 30px;
+      font-size: 2.5em;
+    }
+
+    .name-input {
+      width: 100%;
+      padding: 15px;
+      font-size: 1.2em;
+      border: 2px solid #667eea;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      box-sizing: border-box;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 15px;
+      font-size: 1.2em;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .quiz-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 10px;
+    }
+
+    .timer {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    .timer.warning {
+      color: #e74c3c;
+      animation: pulse 0.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    .score {
+      font-size: 1.3em;
+      color: #27ae60;
+      font-weight: bold;
+    }
+
+    .question-container {
+      margin-bottom: 30px;
+    }
+
+    .question-header {
+      background: #667eea;
+      color: white;
+      padding: 15px;
+      border-radius: 10px 10px 0 0;
+      font-size: 1.1em;
+    }
+
+    .question-text {
+      font-size: 1.3em;
+      margin-bottom: 25px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 0 0 10px 10px;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+    }
+
+    .options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .option {
+      padding: 15px;
+      background: #f8f9fa;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-align: center;
+      font-size: 1.1em;
+    }
+
+    .option:hover {
+      background: #e8e9ff;
+      border-color: #667eea;
+      transform: translateY(-2px);
+    }
+
+    .option.selected {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+
+    .option.correct {
+      background: #27ae60;
+      color: white;
+      border-color: #27ae60;
+    }
+
+    .option.incorrect {
+      background: #e74c3c;
+      color: white;
+      border-color: #e74c3c;
+    }
+
+    .drag-container {
+      min-height: 100px;
+      border: 2px dashed #667eea;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+      background: #f8f9fa;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .word-bank {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .draggable-word {
+      padding: 10px 20px;
+      background: #667eea;
+      color: white;
+      border-radius: 8px;
+      cursor: move;
+      user-select: none;
+      transition: all 0.3s;
+    }
+
+    .draggable-word:hover {
+      background: #5568d3;
+      transform: scale(1.05);
+    }
+
+    .draggable-word.in-answer {
+      background: #764ba2;
+    }
+
+    .emoji-feedback {
+      position: fixed;
+      font-size: 5em;
+      animation: floatUp 1s ease-out forwards;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    @keyframes floatUp {
+      0% {
+        opacity: 1;
+        transform: translateY(0) scale(0.5);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-200px) scale(1.5);
+      }
+    }
+
+    .result-summary {
+      background: #f8f9fa;
+      padding: 30px;
+      border-radius: 15px;
+      margin-bottom: 30px;
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px;
+      border-bottom: 1px solid #e0e0e0;
+      font-size: 1.2em;
+    }
+
+    .result-row:last-child {
+      border-bottom: none;
+      font-weight: bold;
+      font-size: 1.5em;
+      color: #667eea;
+    }
+
+    .improvement-section {
+      background: #fff3cd;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      border-left: 5px solid #ffc107;
+    }
+
+    .improvement-section h3 {
+      color: #856404;
+      margin-top: 0;
+    }
+
+    .leaderboard {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
+    .leaderboard-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px;
+      background: white;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      border-left: 5px solid #667eea;
+    }
+
+    .leaderboard-item.current-player {
+      background: #e8e9ff;
+      border-left-color: #27ae60;
+    }
+
+    .rank {
+      font-weight: bold;
+      color: #667eea;
+      font-size: 1.2em;
+    }
+
+    .explanation {
+      background: #e8f5e9;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 15px;
+      border-left: 4px solid #27ae60;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #667eea;
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+  <div class="container"><!-- Start Screen -->
+   <div class="start-screen active">
+    <h1 id="game-title">🎮 Present Perfect Quiz Game</h1>
+    <p style="text-align: center; font-size: 1.2em; color: #666; margin-bottom: 30px;">ทดสอบความรู้ Present Perfect ของคุณ!<br>
+      3 พาร์ท • 15 ข้อ • 30 วินาทีต่อข้อ</p><input type="text" id="first-name" class="name-input" placeholder="ชื่อ" maxlength="30" required> <input type="text" id="last-name" class="name-input" placeholder="นามสกุล" maxlength="30" required>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;"><input type="text" id="class-level" class="name-input" placeholder="ชั้น (เช่น ม.3)" maxlength="10" required> <input type="text" id="room-number" class="name-input" placeholder="ห้อง" maxlength="5" required> <input type="text" id="student-number" class="name-input" placeholder="เลขที่" maxlength="5" required>
+    </div><button class="btn" onclick="startQuiz()">เริ่มเกม</button>
+   </div><!-- Quiz Screen -->
+   <div class="quiz-screen">
+    <div class="quiz-header">
+     <div>
+      <div style="font-size: 0.9em; color: #666;">
+       ข้อที่ <span id="current-question">1</span>/15
+      </div>
+      <div style="font-size: 0.9em; color: #666;">
+       พาร์ท <span id="current-part">1</span>/3
+      </div>
+     </div>
+     <div class="timer" id="timer"><span id="timer-label">เวลา</span>: <span id="time-left">30</span>s
+     </div>
+     <div class="score"><span id="score-label">คะแนน</span>: <span id="score">0</span>
+     </div>
+    </div>
+    <div class="question-container">
+     <div class="question-header" id="part-title">
+      พาร์ท 1: เลือกคำตอบที่ถูกต้อง
+     </div>
+     <div class="question-text" id="question-text"></div><!-- Multiple Choice Options -->
+     <div class="options" id="options-container"></div><!-- Drag and Drop Container -->
+     <div id="drag-drop-section" style="display: none;">
+      <div class="drag-container" id="answer-area"></div>
+      <div class="word-bank" id="word-bank"></div>
+     </div>
+     <div class="explanation" id="explanation" style="display: none;"></div>
+    </div><button class="btn" id="submit-btn" onclick="submitAnswer()">ส่งคำตอบ</button>
+   </div><!-- Result Screen -->
+   <div class="result-screen">
+    <h1>🎉 สรุปผลการทำแบบทดสอบ</h1>
+    <div class="result-summary">
+     <div class="result-row"><span>คะแนนพื้นฐาน:</span> <span id="basic-score">0</span>
+     </div>
+     <div class="result-row"><span>⚡ โบนัสความเร็ว:</span> <span id="speed-bonus-display">0</span>
+     </div>
+     <div class="result-row"><span>คะแนนรวม:</span> <span id="final-score-display">0</span>
+     </div>
+    </div>
+    <div class="improvement-section" id="improvement-section"></div>
+    <div class="leaderboard">
+     <h2 style="text-align: center; color: #667eea;">🏆 กระดานคะแนน</h2>
+     <div id="leaderboard-list" class="loading">
+      กำลังโหลด...
+     </div>
+    </div><button class="btn" onclick="restartQuiz()">เล่นอีกครั้ง</button>
+   </div>
+  </div>
+  <script>
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby3xtbxARPgRO1M9d8ue-EIGrRfXp1Ln2oTVLf7nUjd2nX_FLpr6bUihYgDnd6StxpWkg/exec';
+    const defaultConfig = {
+      game_title: "🎮 Present Perfect Quiz Game",
+      timer_label: "เวลา",
+      score_label: "คะแนน"
+    };
+
+    let currentPlayerName = '';
+    let currentRecordId = null;
+
+    const questions = {
+      part1: [
+        {
+          question: "She _ to Paris three times.",
+          options: ["has been", "have been", "was", "is"],
+          correct: 0,
+          explanation: "ใช้ 'has been' เพราะประธาน 'She' เป็นเอกพจน์ และแสดงประสบการณ์ที่เกิดขึ้นแล้ว"
+        },
+        {
+          question: "They _ their homework yet.",
+          options: ["hasn't finished", "haven't finished", "didn't finish", "don't finish"],
+          correct: 1,
+          explanation: "ใช้ 'haven't finished' เพราะประธาน 'They' เป็นพหูพจน์ และมี 'yet' บ่งบอกว่ายังไม่เสร็จ"
+        },
+        {
+          question: "I _ this movie before.",
+          options: ["have seen", "has seen", "saw", "see"],
+          correct: 0,
+          explanation: "ใช้ 'have seen' เพราะประธาน 'I' ใช้กับ have และแสดงประสบการณ์ที่เกิดขึ้นแล้ว"
+        },
+        {
+          question: "He _ his keys. He can't find them.",
+          options: ["has lost", "have lost", "lost", "loses"],
+          correct: 0,
+          explanation: "ใช้ 'has lost' เพราะประธาน 'He' เป็นเอกพจน์ และผลกระทบยังคงอยู่ (ยังหาไม่เจอ)"
+        },
+        {
+          question: "We _ in this house since 2010.",
+          options: ["has lived", "have lived", "lived", "live"],
+          correct: 1,
+          explanation: "ใช้ 'have lived' เพราะประธาน 'We' เป็นพหูพจน์ และมี 'since' บ่งบอกช่วงเวลาที่เริ่มต้น"
+        }
+      ],
+      part2: [
+        {
+          question: "เรียงประโยค: I / never / have / sushi / eaten",
+          words: ["I", "have", "never", "eaten", "sushi"],
+          correct: ["I", "have", "never", "eaten", "sushi"],
+          explanation: "โครงสร้าง: Subject + have/has + never + V3 + Object"
+        },
+        {
+          question: "เรียงประโยค: She / just / has / arrived / home",
+          words: ["She", "has", "just", "arrived", "home"],
+          correct: ["She", "has", "just", "arrived", "home"],
+          explanation: "โครงสร้าง: Subject + has + just + V3 + Place (just วางหลัง has/have)"
+        },
+        {
+          question: "เรียงประโยค: Have / ever / you / been / to / Japan / ?",
+          words: ["Have", "you", "ever", "been", "to", "Japan", "?"],
+          correct: ["Have", "you", "ever", "been", "to", "Japan", "?"],
+          explanation: "โครงสร้างคำถาม: Have/Has + Subject + ever + V3 + ...?"
+        },
+        {
+          question: "เรียงประโยค: They / not / have / finished / the / project / yet",
+          words: ["They", "have", "not", "finished", "the", "project", "yet"],
+          correct: ["They", "have", "not", "finished", "the", "project", "yet"],
+          explanation: "โครงสร้างปฏิเสธ: Subject + have/has + not + V3 + ... + yet"
+        },
+        {
+          question: "เรียงประโยค: He / has / already / read / this / book",
+          words: ["He", "has", "already", "read", "this", "book"],
+          correct: ["He", "has", "already", "read", "this", "book"],
+          explanation: "โครงสร้าง: Subject + has + already + V3 + Object (already วางหลัง has/have)"
+        }
+      ],
+      part3: [
+        {
+          question: "กริยาช่อง 3 ของ 'go' คือ?",
+          options: ["went", "gone", "goed", "going"],
+          correct: 1,
+          explanation: "กริยาช่อง 3 ของ go คือ gone (go-went-gone)"
+        },
+        {
+          question: "กริยาช่อง 3 ของ 'eat' คือ?",
+          options: ["ate", "eated", "eaten", "eating"],
+          correct: 2,
+          explanation: "กริยาช่อง 3 ของ eat คือ eaten (eat-ate-eaten)"
+        },
+        {
+          question: "กริยาช่อง 3 ของ 'write' คือ?",
+          options: ["wrote", "writed", "written", "writing"],
+          correct: 2,
+          explanation: "กริยาช่อง 3 ของ write คือ written (write-wrote-written)"
+        },
+        {
+          question: "กริยาช่อง 3 ของ 'see' คือ?",
+          options: ["saw", "seed", "seen", "seeing"],
+          correct: 2,
+          explanation: "กริยาช่อง 3 ของ see คือ seen (see-saw-seen)"
+        },
+        {
+          question: "กริยาช่อง 3 ของ 'take' คือ?",
+          options: ["took", "taked", "taken", "taking"],
+          correct: 2,
+          explanation: "กริยาช่อง 3 ของ take คือ taken (take-took-taken)"
+        }
+      ]
+    };
+
+    let allQuestions = [];
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let speedBonus = 0;
+    let timeLeft = 30;
+    let timerInterval;
+    let questionStartTime;
+    let selectedAnswer = null;
+    let draggedWords = [];
+    let part1Correct = 0;
+    let part2Correct = 0;
+    let part3Correct = 0;
+
+    function shuffleArray(array) {
+      const newArray = [...array];
+      for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+      }
+      return newArray;
+    }
+
+    function startQuiz() {
+      const firstName = document.getElementById('first-name').value.trim();
+      const lastName = document.getElementById('last-name').value.trim();
+      const classLevel = document.getElementById('class-level').value.trim();
+      const roomNumber = document.getElementById('room-number').value.trim();
+      const studentNumber = document.getElementById('student-number').value.trim();
+      
+      if (!firstName || !lastName || !classLevel || !roomNumber || !studentNumber) {
+        const message = document.createElement('div');
+        message.textContent = 'กรุณากรอกข้อมูลให้ครบทุกช่อง';
+        message.style.cssText = 'background: #fee; color: #c33; padding: 10px; border-radius: 5px; margin-top: 10px; text-align: center;';
+        document.querySelector('.start-screen').appendChild(message);
+        setTimeout(() => message.remove(), 3000);
+        return;
+      }
+
+      // FIX: build a proper player name string (was using ${...} outside template literal)
+      currentPlayerName = `${firstName} ${lastName} (${classLevel}/${roomNumber}) เลขที่ ${studentNumber}`;
+
+      const shuffledPart1 = shuffleArray(questions.part1);
+      const shuffledPart2 = shuffleArray(questions.part2);
+      const shuffledPart3 = shuffleArray(questions.part3);
+      
+      allQuestions = [
+        ...shuffledPart1.map(q => ({...q, part: 1, type: 'multiple'})),
+        ...shuffledPart2.map(q => ({...q, part: 2, type: 'drag'})),
+        ...shuffledPart3.map(q => ({...q, part: 3, type: 'multiple'}))
+      ];
+
+      currentQuestionIndex = 0;
+      score = 0;
+      speedBonus = 0;
+      part1Correct = 0;
+      part2Correct = 0;
+      part3Correct = 0;
+
+      document.querySelector('.start-screen').classList.remove('active');
+      document.querySelector('.quiz-screen').classList.add('active');
+      
+      loadQuestion();
+    }
+
+    function loadQuestion() {
+      if (currentQuestionIndex >= allQuestions.length) {
+        showResults();
+        return;
+      }
+
+      const question = allQuestions[currentQuestionIndex];
+      selectedAnswer = null;
+      draggedWords = [];
+
+      document.getElementById('current-question').textContent = currentQuestionIndex + 1;
+      document.getElementById('current-part').textContent = question.part;
+      document.getElementById('score').textContent = score;
+      document.getElementById('question-text').textContent = question.question;
+      document.getElementById('explanation').style.display = 'none';
+
+      const partTitles = {
+        1: 'พาร์ท 1: เลือกคำตอบที่ถูกต้อง',
+        2: 'พาร์ท 2: เรียงประโยคให้ถูกต้อง',
+        3: 'พาร์ท 3: กริยาช่อง 3'
+      };
+      document.getElementById('part-title').textContent = partTitles[question.part];
+
+      const optionsContainer = document.getElementById('options-container');
+      const dragDropSection = document.getElementById('drag-drop-section');
+
+      if (question.type === 'multiple') {
+        optionsContainer.style.display = 'grid';
+        dragDropSection.style.display = 'none';
+        
+        optionsContainer.innerHTML = '';
+        question.options.forEach((option, index) => {
+          const optionDiv = document.createElement('div');
+          optionDiv.className = 'option';
+          optionDiv.textContent = option;
+          optionDiv.onclick = () => selectOption(index);
+          optionsContainer.appendChild(optionDiv);
+        });
+      } else {
+        optionsContainer.style.display = 'none';
+        dragDropSection.style.display = 'block';
+        
+        const answerArea = document.getElementById('answer-area');
+        const wordBank = document.getElementById('word-bank');
+        answerArea.innerHTML = '';
+        wordBank.innerHTML = '';
+
+        const shuffledWords = shuffleArray(question.words);
+        shuffledWords.forEach(word => {
+          const wordDiv = document.createElement('div');
+          wordDiv.className = 'draggable-word';
+          wordDiv.textContent = word;
+          wordDiv.draggable = true;
+          wordDiv.ondragstart = (e) => {
+            e.dataTransfer.setData('text', word);
+            e.target.style.opacity = '0.5';
+          };
+          wordDiv.ondragend = (e) => {
+            e.target.style.opacity = '1';
+          };
+          wordDiv.onclick = () => moveWordToAnswer(word, wordDiv);
+          wordBank.appendChild(wordDiv);
+        });
+
+        answerArea.ondragover = (e) => e.preventDefault();
+        answerArea.ondrop = (e) => {
+          e.preventDefault();
+          const word = e.dataTransfer.getData('text');
+          addWordToAnswer(word);
+        };
+      }
+
+      timeLeft = 30;
+      questionStartTime = Date.now();
+      startTimer();
+    }
+
+    function selectOption(index) {
+      selectedAnswer = index;
+      const options = document.querySelectorAll('.option');
+      options.forEach((opt, i) => {
+        opt.classList.toggle('selected', i === index);
+      });
+    }
+
+    function moveWordToAnswer(word, wordDiv) {
+      if (!draggedWords.includes(word)) {
+        addWordToAnswer(word);
+        wordDiv.classList.add('in-answer');
+      }
+    }
+
+    function addWordToAnswer(word) {
+      if (draggedWords.includes(word)) return;
+      
+      draggedWords.push(word);
+      const answerArea = document.getElementById('answer-area');
+      
+      const wordDiv = document.createElement('div');
+      wordDiv.className = 'draggable-word in-answer';
+      wordDiv.textContent = word;
+      wordDiv.onclick = () => {
+        draggedWords = draggedWords.filter(w => w !== word);
+        wordDiv.remove();
+        
+        const wordBankWords = document.querySelectorAll('#word-bank .draggable-word');
+        wordBankWords.forEach(w => {
+          if (w.textContent === word) {
+            w.classList.remove('in-answer');
+          }
+        });
+      };
+      
+      answerArea.appendChild(wordDiv);
+    }
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      const timerElement = document.getElementById('timer');
+      const timeLeftElement = document.getElementById('time-left');
+      
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        timeLeftElement.textContent = timeLeft;
+        
+        if (timeLeft <= 10) {
+          timerElement.classList.add('warning');
+        } else {
+          timerElement.classList.remove('warning');
+        }
+        
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          submitAnswer(true);
+        }
+      }, 1000);
+    }
+
+    function submitAnswer(timeout = false) {
+      clearInterval(timerInterval);
+      
+      const question = allQuestions[currentQuestionIndex];
+      let isCorrect = false;
+
+      if (question.type === 'multiple') {
+        if (selectedAnswer === null && !timeout) {
+          const message = document.createElement('div');
+          message.textContent = 'กรุณาเลือกคำตอบ';
+          message.style.cssText = 'background: #fee; color: #c33; padding: 10px; border-radius: 5px; margin-top: 10px; text-align: center;';
+          document.querySelector('.question-container').appendChild(message);
+          setTimeout(() => message.remove(), 2000);
+          startTimer();
+          return;
+        }
+        
+        isCorrect = selectedAnswer === question.correct;
+        
+        const options = document.querySelectorAll('.option');
+        options.forEach((opt, i) => {
+          opt.onclick = null;
+          if (i === question.correct) {
+            opt.classList.add('correct');
+          } else if (i === selectedAnswer) {
+            opt.classList.add('incorrect');
+          }
+        });
+      } else {
+        if (draggedWords.length === 0 && !timeout) {
+          const message = document.createElement('div');
+          message.textContent = 'กรุณาเรียงคำให้ครบ';
+          message.style.cssText = 'background: #fee; color: #c33; padding: 10px; border-radius: 5px; margin-top: 10px; text-align: center;';
+          document.querySelector('.question-container').appendChild(message);
+          setTimeout(() => message.remove(), 2000);
+          startTimer();
+          return;
+        }
+        
+        isCorrect = JSON.stringify(draggedWords) === JSON.stringify(question.correct);
+        
+        const answerArea = document.getElementById('answer-area');
+        if (isCorrect) {
+          answerArea.style.borderColor = '#27ae60';
+          answerArea.style.background = '#e8f5e9';
+        } else {
+          answerArea.style.borderColor = '#e74c3c';
+          answerArea.style.background = '#ffebee';
+        }
+      }
+
+      if (isCorrect) {
+        score += 10;
+        const timeBonus = Math.floor((30 - (Date.now() - questionStartTime) / 1000) / 3);
+        speedBonus += timeBonus;
+        
+        if (question.part === 1) part1Correct++;
+        if (question.part === 2) part2Correct++;
+        if (question.part === 3) part3Correct++;
+      }
+
+      showEmoji(isCorrect);
+      
+      const explanation = document.getElementById('explanation');
+      explanation.textContent = question.explanation;
+      explanation.style.display = 'block';
+
+      document.getElementById('score').textContent = score;
+      
+      const submitBtn = document.getElementById('submit-btn');
+      // configure the submit button to proceed to next or final
+      submitBtn.textContent = currentQuestionIndex < allQuestions.length - 1 ? 'ข้อถัดไป' : 'ดูผลคะแนน';
+      submitBtn.onclick = () => {
+        currentQuestionIndex++;
+        submitBtn.textContent = 'ส่งคำตอบ';
+        submitBtn.onclick = () => submitAnswer();
+        loadQuestion();
+      };
+    }
+
+    function showEmoji(isCorrect) {
+      const emoji = document.createElement('div');
+      emoji.className = 'emoji-feedback';
+      emoji.textContent = isCorrect ? '😊' : '😢';
+      emoji.style.left = '50%';
+      emoji.style.top = '50%';
+      emoji.style.transform = 'translate(-50%, -50%)';
+      document.body.appendChild(emoji);
+      
+      setTimeout(() => emoji.remove(), 1000);
+    }
+
+    async function showResults() {
+      document.querySelector('.quiz-screen').classList.remove('active');
+      document.querySelector('.result-screen').classList.add('active');
+
+      const finalScore = score + speedBonus;
+      
+      document.getElementById('basic-score').textContent = score;
+      document.getElementById('speed-bonus-display').textContent = speedBonus;
+      document.getElementById('final-score-display').textContent = finalScore;
+
+      const improvements = [];
+      if (part1Correct < 4) improvements.push('พาร์ท 1: ทบทวนโครงสร้างประโยค Present Perfect (has/have + V3)');
+      if (part2Correct < 4) improvements.push('พาร์ท 2: ฝึกเรียงลำดับคำในประโยค Present Perfect');
+      if (part3Correct < 4) improvements.push('พาร์ท 3: ท่องกริยาช่อง 3 ให้มากขึ้น');
+
+      const improvementSection = document.getElementById('improvement-section');
+      if (improvements.length > 0) {
+        improvementSection.innerHTML = '<h3> ข้อเสนอแนะ</h3>' + 
+          improvements.map(imp => `<p>• ${imp}</p>`).join('');
+      } else {
+        improvementSection.innerHTML = '<h3> ยอดเยี่ยม!</h3><p>คุณทำได้ดีมากในทุกพาร์ท!</p>';
+      }
+
+      const leaderboardList = document.getElementById('leaderboard-list');
+      leaderboardList.innerHTML = '<div class="loading">กำลังบันทึกคะแนน...</div>';     
+
+const formData = new URLSearchParams();
+      formData.append('player_name', currentPlayerName);
+      formData.append('total_score', score);
+      formData.append('speed_bonus', speedBonus);
+      formData.append('final_score', finalScore);
+
+      try {
+        const response = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          body: formData.toString(),
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        });
+        
+        // เราไม่สนใจผลลัพธ์การบันทึกมากนัก แค่รอให้เสร็จก็พอ
+        // ถ้าต้องการตรวจสอบ: const result = await response.json();
+        
+        // เมื่อบันทึกเสร็จ ให้โหลดกระดานคะแนน
+        await fetchLeaderboard();
+        
+      } catch (error) {
+        console.error("Error saving score:", error);
+        leaderboardList.innerHTML = '<div style="color: #e74c3c; text-align: center;">ไม่สามารถบันทึกคะแนนได้ (เกิดข้อผิดพลาดในการเชื่อมต่อ)</div>';
+      }
+      // *** เพิ่มฟังก์ชันใหม่นี้ใน <script> ***
+    async function fetchLeaderboard() {
+      const leaderboardList = document.getElementById('leaderboard-list');
+      leaderboardList.innerHTML = '<div class="loading">กำลังโหลด...</div>';
+      
+      try {
+        const response = await fetch(APPS_SCRIPT_URL);
+        const data = await response.json();
+        
+        // Apps Script จะส่งข้อมูลกลับมาในรูปแบบ Array of Objects
+        displayLeaderboard(data);
+        
+      } catch (error) {
+        console.error("Error fetching leaderboard:", error);
+        leaderboardList.innerHTML = '<div style="color: #e74c3c; text-align: center;">ไม่สามารถโหลดกระดานคะแนนได้</div>';
+      }
+    }
+    // -------------------------------------------------------------------
+      if (!createResult || !createResult.isOk) {
+        leaderboardList.innerHTML = '<div style="color: #e74c3c; text-align: center;">ไม่สามารถบันทึกคะแนนได้</div>';
+        // still attempt to fetch existing leaderboard (maybe write failed but read works)
+        fetchAndDisplayLeaderboard();
+      } else {
+        // if create succeeded, try to fetch updated leaderboard and display it
+        // also try to store returned record id for highlighting (supports different SDK shapes)
+        const created = createResult.result || createResult.data || createResult.record || null;
+        if (created) {
+          currentRecordId = created.id || created.__backendId || created._id || null;
+        }
+        await fetchAndDisplayLeaderboard();
+      }
+    }
+
+    // Try multiple common SDK methods to fetch leaderboard data, then call displayLeaderboard
+    async function fetchAndDisplayLeaderboard() {
+      const leaderboardList = document.getElementById('leaderboard-list');
+      leaderboardList.innerHTML = '<div class="loading">กำลังโหลดกระดานคะแนน...</div>';
+
+      let records = null;
+
+      const tryFns = [
+        async () => window.dataSdk.list && typeof window.dataSdk.list === 'function' ? await window.dataSdk.list() : null,
+        async () => window.dataSdk.read && typeof window.dataSdk.read === 'function' ? await window.dataSdk.read() : null,
+        async () => window.dataSdk.getAll && typeof window.dataSdk.getAll === 'function' ? await window.dataSdk.getAll() : null,
+        async () => window.dataSdk.fetch && typeof window.dataSdk.fetch === 'function' ? await window.dataSdk.fetch() : null,
+        async () => window.dataSdk.get && typeof window.dataSdk.get === 'function' ? await window.dataSdk.get() : null,
+        async () => window.dataSdk.query && typeof window.dataSdk.query === 'function' ? await window.dataSdk.query() : null
+      ];
+
+      for (const fn of tryFns) {
+        if (!window.dataSdk) break;
+        try {
+          const res = await fn();
+          // handle a few common response shapes
+          if (!res) continue;
+          if (Array.isArray(res)) {
+            records = res;
+            break;
+          }
+          if (res.data && Array.isArray(res.data)) {
+            records = res.data;
+            break;
+          }
+          if (res.result && Array.isArray(res.result)) {
+            records = res.result;
+            break;
+          }
+          if (res.records && Array.isArray(res.records)) {
+            records = res.records;
+            break;
+          }
+        } catch (e) {
+          // ignore and try next
+          console.warn('fetch attempt failed:', e);
+        }
+      }
+
+      if (!records) {
+        leaderboardList.innerHTML = '<div style="text-align: center; color: #666;">ยังไม่มีคะแนนในระบบ</div>';
+        return;
+      }
+
+      // Normalize records (map common fields)
+      const normalized = records.map(r => ({
+        player_name: r.player_name || r.playerName || r.name || '',
+        final_score: (r.final_score !== undefined && r.final_score !== null) ? r.final_score : (r.finalScore || r.total_score || r.score || 0),
+        __backendId: r.__backendId || r.id || r._id || r.uuid || null,
+        raw: r
+      }));
+
+      displayLeaderboard(normalized);
+    }
+
+    function displayLeaderboard(data) {
+      const leaderboardList = document.getElementById('leaderboard-list');
+      
+      if (!data || data.length === 0) {
+        leaderboardList.innerHTML = '<div style="text-align: center; color: #666;">ยังไม่มีคะแนนในระบบ</div>';
+        return;
+      }
+
+    const sortedData = [...data].sort((a, b) => b.final_score - a.final_score);
+      
+      // หา Record ของผู้เล่นปัจจุบันเพื่อเน้น
+      const currentPlayerRecord = sortedData.find(record => 
+        record.player_name === currentPlayerName && 
+        record.final_score === (score + speedBonus)
+      );
+
+      leaderboardList.innerHTML = sortedData.slice(0, 10).map((record, index) => {
+        // ใช้การเปรียบเทียบชื่อและคะแนนแทน __backendId
+        const isCurrentPlayer = record.player_name === currentPlayerRecord?.player_name && record.final_score === currentPlayerRecord?.final_score;
+        return `
+          <div class="leaderboard-item ${isCurrentPlayer ? 'current-player' : ''}">
+            <div>
+              <span class="rank">#${index + 1}</span>
+              <span style="margin-left: 15px; font-weight: ${isCurrentPlayer ? 'bold' : 'normal'};">
+                ${record.player_name} ${isCurrentPlayer ? '(คุณ)' : ''}
+              </span>
+            </div>
+            <div style="font-weight: bold; color: #667eea;">
+              ${record.final_score} คะแนน
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // simple html escape to avoid unexpected markup from backend
+    function escapeHtml(unsafe) {
+      return String(unsafe)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function restartQuiz() {
+      document.querySelector('.result-screen').classList.remove('active');
+      document.querySelector('.start-screen').classList.add('active');
+      document.getElementById('first-name').value = '';
+      document.getElementById('last-name').value = '';
+      document.getElementById('class-level').value = '';
+      document.getElementById('room-number').value = '';
+      document.getElementById('student-number').value = '';
+    }
+
+    /* const dataHandler = {
+      onDataChanged(data) {
+        if (document.querySelector('.result-screen').classList.contains('active')) {
+          // expect 'data' to be an array or object with array in .data/.result
+          if (Array.isArray(data)) {
+            displayLeaderboard(data.map(d => ({
+              player_name: d.player_name || d.playerName || d.name,
+              final_score: d.final_score || d.finalScore || d.total_score,
+              __backendId: d.__backendId || d.id || d._id || null
+            })));
+          } else if (data && data.data && Array.isArray(data.data)) {
+            displayLeaderboard(data.data.map(d => ({
+              player_name: d.player_name || d.playerName || d.name,
+              final_score: d.final_score || d.finalScore || d.total_score,
+              __backendId: d.__backendId || d.id || d._id || null
+            })));
+          } else {
+            // fallback: attempt to display as-is
+            displayLeaderboard(data);
+          }
+        }
+      }
+    }; */
+
+    /* async function onConfigChange(config) {
+      const gameTitle = config.game_title || defaultConfig.game_title;
+      const timerLabel = config.timer_label || defaultConfig.timer_label;
+      const scoreLabel = config.score_label || defaultConfig.score_label;
+
+      const gameTitleElement = document.getElementById('game-title');
+      if (gameTitleElement) {
+        gameTitleElement.textContent = gameTitle;
+      }
+
+      const timerLabelElement = document.getElementById('timer-label');
+      if (timerLabelElement) {
+        timerLabelElement.textContent = timerLabel;
+      }
+
+      const scoreLabelElement = document.getElementById('score-label');
+      if (scoreLabelElement) {
+        scoreLabelElement.textContent = scoreLabel;
+      }
+    }
+
+    window.elementSdk.init({
+      defaultConfig,
+      onConfigChange,
+      mapToCapabilities: (config) => ({
+        recolorables: [],
+        borderables: [],
+        fontEditable: undefined,
+        fontSizeable: undefined
+      }),
+      mapToEditPanelValues: (config) => new Map([
+        ["game_title", config.game_title || defaultConfig.game_title],
+        ["timer_label", config.timer_label || defaultConfig.timer_label],
+        ["score_label", config.score_label || defaultConfig.score_label]
+      ])
+    });
+
+    // initialize data SDK (you had this already)
+    window.dataSdk && window.dataSdk.init && window.dataSdk.init(dataHandler);
+
+    // Optionally load initial leaderboard on page load if SDK supports listing
+    window.addEventListener('load', () => {
+      // attempt to fetch leaderboard if any SDK method exists
+      if (window.dataSdk) {
+        // don't await here — just try (non-blocking)
+        fetchAndDisplayLeaderboard().catch(err => console.warn('Initial leaderboard fetch failed', err));
+      } else {
+        const lb = document.getElementById('leaderboard-list');
+        if (lb) lb.innerHTML = '<div style="text-align:center;color:#666;">SDK not connected</div>';
+      }
+    }); */
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'99d28dbcd36feba2',t:'MTc2MjkxNDA2My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
